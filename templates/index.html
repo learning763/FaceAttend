@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — FaceAttend Pro{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================
+     STATS ROW
+     ============================================================ -->
+<div class="stats-grid">
+
+  <!-- Total Registered -->
+  <div class="stat-card">
+    <div class="stat-icon blue">
+      <i class="bi bi-people-fill"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-value" id="statTotal">—</div>
+      <div class="stat-label">Total Registered</div>
+    </div>
+  </div>
+
+  <!-- Present Today -->
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <i class="bi bi-check-circle-fill"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-value" id="statPresent">—</div>
+      <div class="stat-label">Present Today</div>
+    </div>
+  </div>
+
+  <!-- Absent Today -->
+  <div class="stat-card">
+    <div class="stat-icon red">
+      <i class="bi bi-x-circle-fill"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-value" id="statAbsent">—</div>
+      <div class="stat-label">Absent Today</div>
+    </div>
+  </div>
+
+  <!-- Attendance Rate -->
+  <div class="stat-card">
+    <div class="stat-icon purple">
+      <i class="bi bi-graph-up-arrow"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-value" id="statRate">—</div>
+      <div class="stat-label">Attendance Rate</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     MAIN GRID: Camera + Attendance Feed
+     ============================================================ -->
+<div style="display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start;">
+
+  <!-- LEFT: Live Recognition Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="bi bi-camera-video-fill" style="color:var(--accent);"></i>
+        Live Recognition
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="faceCountBadge"
+              style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--text-secondary);align-items:center;gap:4px;">
+          <i class="bi bi-person-bounding-box"></i>
+          <span id="faceCountNum">0</span> faces
+        </span>
+        <button class="btn-primary" id="startBtn" onclick="startRecognition()">
+          <i class="bi bi-play-fill"></i>
+          Start
+        </button>
+        <button class="btn-danger-sm d-none" id="stopBtn" onclick="stopRecognition()">
+          <i class="bi bi-stop-fill"></i>
+          Stop
+        </button>
+      </div>
+    </div>
+
+    <!-- Camera viewport -->
+    <div class="cam-wrap">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+      <div id="camPlaceholder" class="cam-placeholder">
+        <i class="bi bi-camera-video-off"></i>
+        <p>Click <strong>Start</strong> to activate camera</p>
+      </div>
+    </div>
+
+    <!-- Controls bar -->
+    <div class="cam-controls">
+      <div class="status-text">
+        <div class="live-dot" id="liveDot"></div>
+        <span id="statusBar">Camera inactive</span>
+      </div>
+      <small style="font-size:12px;color:var(--text-secondary);">
+        Attendance auto-marked on recognition
+      </small>
+    </div>
+  </div>
+
+  <!-- RIGHT: Today's Attendance Feed -->
+  <div class="card" style="display:flex;flex-direction:column;">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="bi bi-check2-all" style="color:var(--success);"></i>
+        Today's Attendance
+      </div>
+      <div id="attendanceCount"
+           style="background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">
+        0
+      </div>
+    </div>
+
+    <!-- Attendance list -->
+    <div id="attendanceList" class="att-feed">
+      <div class="empty-state">
+        <i class="bi bi-calendar-x"></i>
+        <p>No attendance yet</p>
+        <small>Records will appear as faces are recognized</small>
+      </div>
+    </div>
+
+    <!-- Footer link -->
+    <div style="padding:12px 16px;border-top:1px solid var(--border);">
+      <a href="/attendance"
+         class="btn-outline w-100"
+         style="justify-content:center;">
+        <i class="bi bi-table"></i>
+        View All Records
+      </a>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  loadStats();
+  loadTodayAttendance();
+</script>
+{% endblock %}

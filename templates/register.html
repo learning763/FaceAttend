@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %}Register — FaceAttend Pro{% endblock %}
+{% block page_title %}Register Person{% endblock %}
+
+{% block content %}
+
+<div style="display:grid;grid-template-columns:420px 1fr;gap:20px;align-items:start;">
+
+  <!-- ============================================================
+       LEFT: Registration Form
+       ============================================================ -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="bi bi-person-plus-fill" style="color:var(--accent);"></i>
+        New Registration
+      </div>
+    </div>
+
+    <div class="card-body">
+
+      <!-- Name Input -->
+      <div class="mb-16">
+        <label class="form-label" for="nameInput">Full Name</label>
+        <input
+          type="text"
+          id="nameInput"
+          class="form-input"
+          placeholder="e.g. Suraj Shahi"
+          onkeydown="if(event.key==='Enter') startCapture();"
+          autocomplete="off"
+        >
+      </div>
+
+      <!-- Camera Preview -->
+      <div style="margin-bottom:16px;position:relative;border-radius:10px;overflow:hidden;">
+        <div class="cam-wrap" style="aspect-ratio:4/3;border-radius:10px;">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlay"></canvas>
+
+          <!-- Face oval guide -->
+          <div class="face-guide" id="faceGuide"></div>
+          <div class="face-guide-text">Position your face inside the oval</div>
+
+          <!-- Camera loading placeholder -->
+          <div id="camPlaceholder" class="cam-placeholder">
+            <div style="width:40px;height:40px;border:3px solid #444;border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px;"></div>
+            <p>Starting camera…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Capture Progress -->
+      <div id="captureProgress" style="display:none;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <label class="form-label" style="margin:0;">Capturing frames</label>
+          <span id="captureCounter"
+                style="font-size:12px;font-weight:700;color:var(--accent);">0 / 5</span>
+        </div>
+        <div class="capture-progress">
+          <div class="capture-bar" id="progressBar" style="width:0%;"></div>
+        </div>
+      </div>
+
+      <!-- Capture Button -->
+      <button
+        id="captureBtn"
+        class="btn-primary w-100"
+        style="justify-content:center;"
+        onclick="startCapture()">
+        <i class="bi bi-camera-fill"></i>
+        Capture &amp; Register
+      </button>
+
+      <!-- Registration Message -->
+      <div id="regMessage" class="mt-12"></div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       RIGHT: Registered Persons List
+       ============================================================ -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="bi bi-people-fill" style="color:var(--accent);"></i>
+        Registered Persons
+      </div>
+      <button
+        class="btn-outline"
+        style="padding:6px 12px;font-size:12px;"
+        onclick="loadPersons()">
+        <i class="bi bi-arrow-clockwise"></i>
+        Refresh
+      </button>
+    </div>
+
+    <div id="personsList" style="max-height:520px;overflow-y:auto;">
+      <div class="empty-state">
+        <i class="bi bi-person-x"></i>
+        <p>No persons registered yet</p>
+        <small>Register someone using the form on the left</small>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  initRegisterPage();
+  loadPersons();
+</script>
+{% endblock %}

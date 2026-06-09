@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — FaceAttend</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+
+<div class="auth-page">
+
+  <!-- Left panel — branding -->
+  <div class="auth-branding">
+    <div class="auth-brand-inner">
+      <div class="auth-logo-icon"><i class="bi bi-camera-video-fill"></i></div>
+      <h1 class="auth-brand-name">FaceAttend</h1>
+      <p class="auth-brand-tagline">Intelligent Face Recognition<br>Attendance Management System</p>
+
+      <div class="auth-features">
+        <div class="auth-feature">
+          <div class="auth-feature-icon"><i class="bi bi-shield-check-fill"></i></div>
+          <div>
+            <div class="auth-feature-title">Secure Recognition</div>
+            <div class="auth-feature-desc">AI-powered face verification</div>
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-icon"><i class="bi bi-clock-fill"></i></div>
+          <div>
+            <div class="auth-feature-title">Real-time Tracking</div>
+            <div class="auth-feature-desc">Automatic check-in & check-out</div>
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-icon"><i class="bi bi-bar-chart-fill"></i></div>
+          <div>
+            <div class="auth-feature-title">Detailed Reports</div>
+            <div class="auth-feature-desc">Export attendance data anytime</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel — form -->
+  <div class="auth-form-panel">
+    <div class="auth-card">
+
+      <div class="auth-card-logo">
+        <div class="auth-logo-sm"><i class="bi bi-camera-video-fill"></i></div>
+        <span>FaceAttend</span>
+      </div>
+
+      <h2 class="auth-title">Welcome back</h2>
+      <p class="auth-subtitle">Sign in to your administrator account</p>
+
+      {% if registered %}
+      <div class="auth-alert success">
+        <i class="bi bi-check-circle-fill"></i>
+        Account created successfully! Please sign in.
+      </div>
+      {% endif %}
+
+      {% if error %}
+      <div class="auth-alert error">
+        <i class="bi bi-exclamation-circle-fill"></i>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/login" autocomplete="on">
+        <div class="auth-field">
+          <label class="auth-label">Email Address</label>
+          <div class="auth-input-wrap">
+            <i class="bi bi-envelope auth-input-icon"></i>
+            <input type="email" name="email" class="auth-input"
+                   placeholder="you@example.com" required autofocus autocomplete="email">
+          </div>
+        </div>
+
+        <div class="auth-field">
+          <div class="auth-label-row">
+            <label class="auth-label">Password</label>
+          </div>
+          <div class="auth-input-wrap">
+            <i class="bi bi-lock auth-input-icon"></i>
+            <input type="password" name="password" id="pwdField" class="auth-input"
+                   placeholder="Enter your password" required autocomplete="current-password"
+                   style="padding-right:46px">
+            <button type="button" class="auth-pwd-toggle" onclick="togglePwd('pwdField','eyeIcon1')" tabindex="-1">
+              <i class="bi bi-eye" id="eyeIcon1"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="auth-submit-btn">
+          <i class="bi bi-box-arrow-in-right"></i>
+          Sign In
+        </button>
+      </form>
+
+      <div class="auth-footer-link">
+        Don't have an account? <a href="/signup">Create one</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+function togglePwd(fieldId, iconId) {
+  var f = document.getElementById(fieldId);
+  var i = document.getElementById(iconId);
+  if (f.type === 'password') { f.type = 'text';     i.className = 'bi bi-eye-slash'; }
+  else                       { f.type = 'password'; i.className = 'bi bi-eye'; }
+}
+</script>
+</body>
+</html>

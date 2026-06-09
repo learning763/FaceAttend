@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% block title %}Records — FaceAttend Pro{% endblock %}
+{% block page_title %}Attendance Records{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================
+     STATS ROW
+     ============================================================ -->
+<div class="stats-grid">
+
+  <!-- Total Registered -->
+  <div class="stat-card">
+    <div class="stat-icon blue">
+      <i class="bi bi-people-fill"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-value" id="totalRegistered">—</div>
+      <div class="stat-label">Total Registered</div>
+    </div>
+  </div>
+
+  <!-- Present -->
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <i class="bi bi-check-circle-fill"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-value" id="totalCount">0</div>
+      <div class="stat-label">Present</div>
+    </div>
+  </div>
+
+  <!-- Checked Out -->
+  <div class="stat-card">
+    <div class="stat-icon orange">
+      <i class="bi bi-door-open-fill"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-value" id="checkedOutCount">0</div>
+      <div class="stat-label">Checked Out</div>
+    </div>
+  </div>
+
+  <!-- Attendance Rate -->
+  <div class="stat-card">
+    <div class="stat-icon purple">
+      <i class="bi bi-graph-up-arrow"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-value" id="attendancePct">—</div>
+      <div class="stat-label">Rate</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     ATTENDANCE LOG TABLE CARD
+     ============================================================ -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="bi bi-table" style="color:var(--accent);"></i>
+      Attendance Log
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+
+      <!-- Search -->
+      <div class="search-wrap">
+        <i class="bi bi-search"></i>
+        <input
+          type="text"
+          id="searchInput"
+          class="form-input"
+          style="width:200px;padding-left:36px;"
+          placeholder="Search name…"
+          oninput="filterTable()">
+      </div>
+
+      <!-- Date Filter -->
+      <input
+        type="date"
+        id="dateFilter"
+        class="form-input"
+        style="width:160px;"
+        onchange="onDateChange()">
+
+      <!-- Export CSV -->
+      <a id="exportBtn"
+         class="btn-success"
+         href="#"
+         style="text-decoration:none;">
+        <i class="bi bi-download"></i>
+        Export CSV
+      </a>
+
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Check-In</th>
+          <th>Check-Out</th>
+          <th>Duration</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="attendanceTableBody">
+        <tr>
+          <td colspan="6" style="text-align:center;padding:32px 16px;color:var(--text-secondary);">
+            <i class="bi bi-hourglass-split" style="font-size:24px;display:block;margin-bottom:8px;color:#cbd5e1;"></i>
+            Loading records…
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Set today's date using local time (not UTC)
+  (function () {
+    var now = new Date();
+    var y = now.getFullYear();
+    var m = String(now.getMonth() + 1).padStart(2, '0');
+    var d = String(now.getDate()).padStart(2, '0');
+    var todayStr = y + '-' + m + '-' + d;
+    var dateFilter = document.getElementById('dateFilter');
+    dateFilter.value = todayStr;
+    updateExportLink();
+    loadAttendance();
+    loadPersonCount();
+  })();
+
+  function onDateChange() {
+    updateExportLink();
+    loadAttendance();
+  }
+
+  function updateExportLink() {
+    var dateVal = document.getElementById('dateFilter').value;
+    var exportBtn = document.getElementById('exportBtn');
+    exportBtn.href = '/api/export?date=' + encodeURIComponent(dateVal);
+  }
+
+  function loadPersonCount() {
+    fetch('/api/persons')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var persons = Array.isArray(data) ? data : (data.persons || []);
+        document.getElementById('totalRegistered').textContent = persons.length;
+        updatePct();
+      })
+      .catch(function (err) {
+        console.error('loadPersonCount error:', err);
+      });
+  }
+
+  function updatePct() {
+    var total = parseInt(document.getElementById('totalRegistered').textContent, 10);
+    var present = parseInt(document.getElementById('totalCount').textContent, 10);
+    var pctEl = document.getElementById('attendancePct');
+    if (!isNaN(total) && total > 0 && !isNaN(present)) {
+      pctEl.textContent = Math.round((present / total) * 100) + '%';
+    } else {
+      pctEl.textContent = '—';
+    }
+  }
+
+  function filterTable() {
+    var query = document.getElementById('searchInput').value.trim().toLowerCase();
+    var rows = document.querySelectorAll('#attendanceTableBody tr');
+    rows.forEach(function (row) {
+      var nameCell = row.querySelector('td:nth-child(2)');
+      if (!nameCell) return;
+      var text = nameCell.textContent.toLowerCase();
+      row.style.display = (query === '' || text.indexOf(query) !== -1) ? '' : 'none';
+    });
+  }
+</script>
+{% endblock %}
