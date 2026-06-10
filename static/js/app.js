@@ -674,18 +674,22 @@ async function loadPersons() {
         : 'Registered: unknown';
 
       var safeName = (p.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      var safeDept = (p.department || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      var deptLabel = p.department
+        ? '<span style="font-size:11px;background:#ede9fe;color:#6d28d9;padding:1px 7px;border-radius:10px;margin-left:6px;">' + p.department + '</span>'
+        : '';
       return (
         '<div class="person-card">' +
           '<div class="att-avatar" style="background:' + color + ';width:40px;height:40px;font-size:16px;">' +
             initial +
           '</div>' +
           '<div class="person-info">' +
-            '<div class="person-name">' + (p.name || 'Unknown') + '</div>' +
+            '<div class="person-name">' + (p.name || 'Unknown') + deptLabel + '</div>' +
             '<div class="person-sub">' + dateLabel + '</div>' +
           '</div>' +
           '<div style="display:flex;gap:6px;">' +
             '<button class="btn-outline" style="padding:5px 10px;font-size:12px;" ' +
-              'onclick="openEditModal(' + p.id + ', \'' + safeName + '\')" title="Edit name">' +
+              'onclick="openEditModal(' + p.id + ', \'' + safeName + '\', \'' + safeDept + '\')" title="Edit">' +
               '<i class="bi bi-pencil"></i>' +
             '</button>' +
             '<button class="btn-danger-sm" onclick="deletePerson(' + p.id + ', \'' + safeName + '\')" title="Delete">' +

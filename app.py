@@ -506,7 +506,7 @@ def get_attendance():
     cur  = conn.cursor()
     # Only show business-hours records; pre-business-hours (testing) records are excluded
     cur.execute(
-        'SELECT name, check_in, check_out FROM attendance '
+        'SELECT id, name, check_in, check_out FROM attendance '
         'WHERE date=%s AND check_in >= %s '
         'ORDER BY check_in',
         (filter_date, check_in_start_dt)
@@ -515,8 +515,9 @@ def get_attendance():
     cur.close(); conn.close()
 
     records = []
-    for name, check_in, check_out in rows:
+    for rid, name, check_in, check_out in rows:
         records.append({
+            'id':        rid,
             'name':      name,
             'check_in':  fmt_time(check_in),
             'check_out': fmt_time(check_out),

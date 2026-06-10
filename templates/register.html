@@ -121,9 +121,7 @@
 
 </div>
 
-{% endblock %}
-
-<!-- ── Edit Name Modal ── -->
+<!-- ── Edit Person Modal ── -->
 <div id="editModal"
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
             z-index:2000;align-items:center;justify-content:center;">
@@ -135,13 +133,27 @@
         <i class="bi bi-pencil-fill"></i>
       </div>
       <div>
-        <div style="font-size:15px;font-weight:700;color:var(--text-primary);">Edit Name</div>
-        <div style="font-size:12px;color:var(--text-secondary);">Update registered person's name</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text-primary);">Edit Person</div>
+        <div style="font-size:12px;color:var(--text-secondary);">Update registered person's details</div>
       </div>
     </div>
+    <label class="form-label" for="editNameInput">Name</label>
     <input id="editNameInput" type="text" class="form-input" placeholder="Full name"
-           style="margin-bottom:8px;"
+           style="margin-bottom:14px;"
            onkeydown="if(event.key==='Enter') saveEditName(); if(event.key==='Escape') closeEditModal();">
+    <label class="form-label" for="editDeptInput">
+      Department
+      <span style="font-weight:400;color:var(--text-secondary);font-size:11px;margin-left:4px;">(optional)</span>
+    </label>
+    <select id="editDeptInput" class="form-input" style="margin-bottom:8px;">
+      <option value="">— select department —</option>
+      <option value="Audit">Audit</option>
+      <option value="CSoc">CSoc</option>
+      <option value="Training">Training</option>
+      <option value="Administration">Administration</option>
+      <option value="Forensics">Forensics</option>
+      <option value="Research">Research</option>
+    </select>
     <div id="editModalError"
          style="display:none;font-size:12px;color:#dc2626;margin-bottom:10px;padding:8px 12px;
                 background:#fef2f2;border-radius:6px;border:1px solid #fecaca;"></div>
@@ -156,6 +168,8 @@
   </div>
 </div>
 
+{% endblock %}
+
 {% block scripts %}
 <script>
   initRegisterPage();
@@ -163,10 +177,11 @@
 
   var _editingPid = null;
 
-  function openEditModal(pid, currentName) {
+  function openEditModal(pid, currentName, currentDept) {
     _editingPid = pid;
     var input = document.getElementById('editNameInput');
     input.value = currentName;
+    document.getElementById('editDeptInput').value = currentDept || '';
     document.getElementById('editModalError').style.display = 'none';
     document.getElementById('editModal').style.display = 'flex';
     setTimeout(function () { input.focus(); input.select(); }, 50);
@@ -196,7 +211,10 @@
       var resp = await fetch('/api/persons/' + _editingPid, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name: newName })
+        body:    JSON.stringify({
+          name:       newName,
+          department: document.getElementById('editDeptInput').value.trim()
+        })
       });
       var data = await resp.json();
 
