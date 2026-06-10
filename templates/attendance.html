@@ -86,6 +86,12 @@
         style="width:160px;"
         onchange="onDateChange()">
 
+      <!-- Add Record -->
+      <button class="btn-primary" onclick="openAddAttendance()">
+        <i class="bi bi-plus-lg"></i>
+        Add Record
+      </button>
+
       <!-- Export CSV -->
       <a id="exportBtn"
          class="btn-success"
@@ -109,17 +115,196 @@
           <th>Check-Out</th>
           <th>Duration</th>
           <th>Status</th>
+          <th style="text-align:right;width:90px;">Actions</th>
         </tr>
       </thead>
       <tbody id="attendanceTableBody">
         <tr>
-          <td colspan="6" style="text-align:center;padding:32px 16px;color:var(--text-secondary);">
+          <td colspan="7" style="text-align:center;padding:32px 16px;color:var(--text-secondary);">
             <i class="bi bi-hourglass-split" style="font-size:24px;display:block;margin-bottom:8px;color:#cbd5e1;"></i>
             Loading records…
           </td>
         </tr>
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- ============================================================
+     PERSON PROFILE PANEL (shown on search)
+     ============================================================ -->
+<div id="personProfilePanel" style="display:none;margin-top:20px;">
+  <div class="card">
+
+    <!-- ── HEADER ── -->
+    <div class="card-header" style="padding:16px 20px;background:linear-gradient(135deg,var(--accent) 0%,#818cf8 100%);border-radius:16px 16px 0 0;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div id="profileAvatar"
+             style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;
+                    justify-content:center;font-size:20px;font-weight:800;color:var(--accent);
+                    background:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.15);">
+        </div>
+        <div>
+          <div id="profileName"     style="font-size:17px;font-weight:700;color:#fff;">—</div>
+          <div id="profileSubtitle" style="font-size:12px;color:rgba(255,255,255,.75);margin-top:2px;"></div>
+        </div>
+      </div>
+      <button onclick="closePersonProfile()"
+              style="background:rgba(255,255,255,.2);border:none;cursor:pointer;color:#fff;
+                     font-size:16px;padding:6px 10px;border-radius:8px;">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div style="padding:20px;display:flex;flex-direction:column;gap:20px;">
+
+      <!-- ── KPI CHIPS ── -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+        <div class="ph-chip ph-col blue">
+          <i class="bi bi-calendar-check-fill"></i>
+          <div class="ph-chip-num" id="phTotal">0</div>
+          <div class="ph-chip-label">Days Present</div>
+        </div>
+        <div class="ph-chip ph-col green">
+          <i class="bi bi-check-circle-fill"></i>
+          <div class="ph-chip-num" id="phOnTime">0</div>
+          <div class="ph-chip-label">On Time</div>
+        </div>
+        <div class="ph-chip ph-col orange">
+          <i class="bi bi-clock-fill"></i>
+          <div class="ph-chip-num" id="phLate">0</div>
+          <div class="ph-chip-label">Late</div>
+        </div>
+        <div class="ph-chip ph-col purple" style="position:relative;overflow:hidden;">
+          <i class="bi bi-graph-up-arrow"></i>
+          <div class="ph-chip-num" id="phRate">0%</div>
+          <div class="ph-chip-label">On-Time Rate</div>
+          <div style="position:absolute;bottom:0;left:0;height:4px;width:100%;background:rgba(255,255,255,.25);border-radius:0 0 12px 12px;">
+            <div id="phRateBar" style="height:100%;background:#fff;border-radius:0 0 12px 12px;width:0%;transition:width .7s ease;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── INSIGHT CARDS ── -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+
+        <div class="ins-card">
+          <div class="ins-label"><i class="bi bi-box-arrow-in-right" style="color:#6366f1;"></i> Usual Check-In</div>
+          <div class="ins-value" id="insAvgCI">—</div>
+          <div class="ins-sub"   id="insRangeCI"></div>
+        </div>
+
+        <div class="ins-card">
+          <div class="ins-label"><i class="bi bi-box-arrow-right" style="color:#f59e0b;"></i> Usual Check-Out</div>
+          <div class="ins-value" id="insAvgCO">—</div>
+          <div class="ins-sub"   id="insAvgDur"></div>
+        </div>
+
+        <div class="ins-card">
+          <div class="ins-label"><i class="bi bi-fire" style="color:#ef4444;"></i> Current Streak</div>
+          <div class="ins-value" id="insStreak">—</div>
+          <div class="ins-sub"   id="insStreakSub"></div>
+        </div>
+
+      </div>
+
+      <!-- ── CHARTS ROW ── -->
+      <div style="display:grid;grid-template-columns:1fr 220px;gap:16px;">
+
+        <!-- Trend: check-in times over last 30 days -->
+        <div>
+          <div class="chart-title">
+            <i class="bi bi-activity"></i> Check-In Time Trend
+            <span id="phDeadlineNote" style="margin-left:auto;font-size:11px;font-weight:400;color:var(--text-secondary);"></span>
+          </div>
+          <div style="position:relative;height:160px;">
+            <canvas id="personTimeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Day-of-week pattern -->
+        <div>
+          <div class="chart-title"><i class="bi bi-calendar3-week"></i> Avg by Day of Week</div>
+          <div style="position:relative;height:160px;">
+            <canvas id="personDowChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── HISTORY TABLE ── -->
+      <div>
+        <div class="chart-title" style="margin-bottom:10px;"><i class="bi bi-table"></i> Full Attendance History</div>
+        <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--border);">
+          <table class="data-table" style="margin:0;">
+            <thead>
+              <tr><th>Date</th><th>Day</th><th>Check-In</th><th>Check-Out</th><th>Duration</th><th>Status</th></tr>
+            </thead>
+            <tbody id="personHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /padding wrapper -->
+  </div><!-- /card -->
+</div><!-- /panel -->
+
+<!-- ── Add / Edit Attendance Modal ── -->
+<div id="attModal"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+            z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 32px;width:100%;max-width:460px;
+              box-shadow:0 20px 60px rgba(0,0,0,.25);margin:0 16px;">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div id="attModalTitle" style="font-size:16px;font-weight:700;color:var(--text-primary);">Add Record</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Manual attendance entry</div>
+      </div>
+      <button onclick="closeAttModal()"
+              style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:18px;">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div id="attPersonRow" style="margin-bottom:14px;">
+      <label class="form-label">Person</label>
+      <select id="attPerson" class="form-input">
+        <option value="">— select person —</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label class="form-label">Date</label>
+      <input type="date" id="attDate" class="form-input">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div>
+        <label class="form-label">Check-In Time</label>
+        <input type="time" id="attCheckIn" class="form-input">
+      </div>
+      <div>
+        <label class="form-label" style="display:flex;gap:4px;align-items:center;">
+          Check-Out
+          <span style="font-weight:400;font-size:11px;color:var(--text-secondary);">(optional)</span>
+        </label>
+        <input type="time" id="attCheckOut" class="form-input">
+      </div>
+    </div>
+
+    <div id="attModalError"
+         style="display:none;font-size:12px;color:#dc2626;padding:8px 12px;margin-bottom:10px;
+                background:#fef2f2;border-radius:6px;border:1px solid #fecaca;"></div>
+
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button id="attSaveBtn" onclick="saveAttendance()" class="btn-primary" style="flex:1;justify-content:center;">
+        <i class="bi bi-check-lg"></i> Save
+      </button>
+      <button onclick="closeAttModal()" class="btn-outline" style="flex:1;justify-content:center;">
+        Cancel
+      </button>
+    </div>
   </div>
 </div>
 
@@ -146,10 +331,14 @@
     loadAttendance();
   }
 
+  document.getElementById('attModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAttModal();
+  });
+
   function updateExportLink() {
     var dateVal = document.getElementById('dateFilter').value;
     var exportBtn = document.getElementById('exportBtn');
-    exportBtn.href = '/api/export?date=' + encodeURIComponent(dateVal);
+    exportBtn.href = '/api/attendance/export?date=' + encodeURIComponent(dateVal);
   }
 
   function loadPersonCount() {
@@ -176,6 +365,7 @@
     }
   }
 
+  var _profileTimer = null;
   function filterTable() {
     var query = document.getElementById('searchInput').value.trim().toLowerCase();
     var rows = document.querySelectorAll('#attendanceTableBody tr');
@@ -185,6 +375,13 @@
       var text = nameCell.textContent.toLowerCase();
       row.style.display = (query === '' || text.indexOf(query) !== -1) ? '' : 'none';
     });
+    // Debounced person profile lookup
+    clearTimeout(_profileTimer);
+    if (query.length >= 2) {
+      _profileTimer = setTimeout(function () { loadPersonProfile(query); }, 450);
+    } else {
+      closePersonProfile();
+    }
   }
 </script>
 {% endblock %}

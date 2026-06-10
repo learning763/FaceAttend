@@ -141,11 +141,118 @@
 
 </div>
 
+<!-- ============================================================
+     DEPARTMENT ANALYTICS
+     ============================================================ -->
+<div style="margin-top:24px;">
+
+  <!-- Section header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <h2 style="font-size:15px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;margin:0;">
+      <i class="bi bi-bar-chart-fill" style="color:var(--accent);"></i>
+      Department Overview
+    </h2>
+    <button class="btn-outline" onclick="loadDepartmentStats()" style="font-size:12px;padding:6px 12px;">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start;">
+
+    <!-- Donut Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="bi bi-pie-chart-fill" style="color:var(--accent);"></i>
+          Status Breakdown
+        </div>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;align-items:center;gap:16px;">
+        <div style="position:relative;width:160px;height:160px;">
+          <canvas id="donutChart"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+            <div id="donutPresentNum" style="font-size:26px;font-weight:800;color:var(--text-primary);">—</div>
+            <div style="font-size:11px;color:var(--text-secondary);">Present</div>
+          </div>
+        </div>
+        <div id="donutLegend" style="width:100%;display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </div>
+
+    <!-- Timeline Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="bi bi-clock-history" style="color:var(--accent);"></i>
+          Individual Attendance Timeline
+        </div>
+        <span id="onTimeDeadlineLabel" style="font-size:11px;color:var(--text-secondary);"></span>
+      </div>
+      <div style="padding:16px;position:relative;">
+        <div id="timelineWrap" style="position:relative;">
+          <canvas id="timelineChart"></canvas>
+        </div>
+        <div id="timelineEmpty" style="display:none;text-align:center;padding:40px 0;color:var(--text-secondary);font-size:13px;">
+          <i class="bi bi-calendar-x" style="font-size:28px;display:block;margin-bottom:8px;color:#cbd5e1;"></i>
+          No attendance records yet today
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Late Arrivals + Absent row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+
+    <!-- Late Arrivals -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="bi bi-clock-fill" style="color:#f59e0b;"></i>
+          Late Arrivals Today
+        </div>
+        <span id="lateCountBadge"
+              style="background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;
+                     padding:3px 10px;border-radius:20px;">0</span>
+      </div>
+      <div id="lateList" style="max-height:280px;overflow-y:auto;">
+        <div class="empty-state" style="padding:32px 20px;">
+          <i class="bi bi-check-circle" style="color:#22c55e;font-size:32px;"></i>
+          <p style="margin-top:8px;">No late arrivals yet</p>
+          <small>Everyone is on time today</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Absent Today -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="bi bi-person-x-fill" style="color:#ef4444;"></i>
+          Not Yet In
+        </div>
+        <span id="absentCountBadge"
+              style="background:#fee2e2;color:#b91c1c;font-size:12px;font-weight:700;
+                     padding:3px 10px;border-radius:20px;">0</span>
+      </div>
+      <div id="absentList" style="max-height:280px;overflow-y:auto;">
+        <div class="empty-state" style="padding:32px 20px;">
+          <i class="bi bi-hourglass-split" style="color:#cbd5e1;font-size:32px;"></i>
+          <p style="margin-top:8px;">Loading…</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
   loadStats();
   loadTodayAttendance();
+  loadDepartmentStats();
+  setInterval(loadDepartmentStats, 30000);
 </script>
 {% endblock %}

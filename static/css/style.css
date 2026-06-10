@@ -815,11 +815,87 @@ textarea {
 }
 
 /* ============================================================
+   PERSON PROFILE CHIPS
+   ============================================================ */
+.ph-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  min-width: 110px;
+}
+.ph-chip.green  { background: #dcfce7; color: #15803d; }
+.ph-chip.orange { background: #fef3c7; color: #92400e; }
+.ph-chip.blue   { background: #dbeafe; color: #1d4ed8; }
+.ph-chip.purple { background: #ede9fe; color: #6d28d9; }
+.ph-chip > i    { font-size: 20px; flex-shrink: 0; }
+.ph-chip-num   { font-size: 22px; font-weight: 800; line-height: 1; }
+.ph-chip-label { font-size: 11px; font-weight: 500; margin-top: 2px; opacity: .8; }
+
+/* Column layout variant (KPI grid) */
+.ph-chip.ph-col {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 14px 16px;
+}
+.ph-chip.ph-col > i       { font-size: 16px; margin-bottom: 4px; }
+.ph-chip.ph-col .ph-chip-num { font-size: 26px; }
+
+/* ============================================================
+   INSIGHT CARDS
+   ============================================================ */
+.ins-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ins-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+.ins-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+.ins-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   CHART SECTION TITLE (reused inside profile panel)
+   ============================================================ */
+.chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ============================================================
    TOAST NOTIFICATIONS
    ============================================================ */
 .toast-wrap {
   position: fixed;
-  bottom: 24px;
+  top: 24px;
   right: 24px;
   z-index: 9999;
   display: flex;

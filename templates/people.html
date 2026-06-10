@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+{% block title %}People — FaceAttend Pro{% endblock %}
+{% block page_title %}People Management{% endblock %}
+
+{% block content %}
+
+<!-- ── STATS ROW ── -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);max-width:700px;margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
+    <div class="stat-info">
+      <div class="stat-value" id="pmTotal">—</div>
+      <div class="stat-label">Total Registered</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="stat-info">
+      <div class="stat-value" id="pmPresent">—</div>
+      <div class="stat-label">Present Today</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon red"><i class="bi bi-x-circle-fill"></i></div>
+    <div class="stat-info">
+      <div class="stat-value" id="pmAbsent">—</div>
+      <div class="stat-label">Absent Today</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PEOPLE TABLE CARD ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="bi bi-people-fill" style="color:var(--accent);"></i>
+      Registered People
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <!-- Search -->
+      <div class="search-wrap">
+        <i class="bi bi-search"></i>
+        <input type="text" id="pmSearch" class="form-input"
+               style="width:200px;padding-left:36px;"
+               placeholder="Search name…"
+               oninput="filterPeople()">
+      </div>
+      <!-- Add new shortcut -->
+      <a href="/register" class="btn-primary" style="text-decoration:none;">
+        <i class="bi bi-person-plus-fill"></i>
+        Add Person
+      </a>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="pmTable">
+      <thead>
+        <tr>
+          <th style="width:48px;">#</th>
+          <th>Name</th>
+          <th>Registered</th>
+          <th>Department</th>
+          <th>Today's Status</th>
+          <th style="width:130px;text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="pmBody">
+        <tr>
+          <td colspan="6" style="text-align:center;padding:40px;">
+            <i class="bi bi-hourglass-split" style="font-size:24px;color:#cbd5e1;display:block;margin-bottom:8px;"></i>
+            Loading…
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── EDIT MODAL ── -->
+<div id="pmEditModal"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+            z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 32px;width:100%;max-width:400px;
+              box-shadow:0 20px 60px rgba(0,0,0,.25);margin:0 16px;">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div id="pmEditAvatar"
+           style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;
+                  justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0;"></div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text-primary);">Edit Name</div>
+        <div id="pmEditOldName" style="font-size:12px;color:var(--text-secondary);"></div>
+      </div>
+      <button onclick="pmCloseModal()"
+              style="margin-left:auto;background:none;border:none;cursor:pointer;
+                     color:var(--text-secondary);font-size:18px;padding:4px;">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <label class="form-label" for="pmEditInput">Name</label>
+    <input id="pmEditInput" type="text" class="form-input" style="margin-bottom:14px;"
+           placeholder="Full name"
+           onkeydown="if(event.key==='Enter') pmSave(); if(event.key==='Escape') pmCloseModal();">
+
+    <label class="form-label" for="pmDeptInput">
+      Department
+      <span style="font-weight:400;color:var(--text-secondary);font-size:11px;margin-left:4px;">(optional)</span>
+    </label>
+    <select id="pmDeptInput" class="form-input" style="margin-bottom:8px;">
+      <option value="">— select department —</option>
+      <option value="Audit">Audit</option>
+      <option value="CSoc">CSoc</option>
+      <option value="Training">Training</option>
+      <option value="Administration">Administration</option>
+      <option value="Forensics">Forensics</option>
+      <option value="Research">Research</option>
+    </select>
+
+    <div id="pmEditError"
+         style="display:none;font-size:12px;color:#dc2626;padding:8px 12px;margin-bottom:8px;
+                background:#fef2f2;border-radius:6px;border:1px solid #fecaca;"></div>
+
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button id="pmSaveBtn" onclick="pmSave()" class="btn-primary" style="flex:1;justify-content:center;">
+        <i class="bi bi-check-lg"></i> Save Changes
+      </button>
+      <button onclick="pmCloseModal()" class="btn-outline" style="flex:1;justify-content:center;">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var _pmEditId   = null;
+var _pmPersons  = [];
+var _pmPresence = {};   // { name_lowercase: status }
+
+(function init() {
+  loadPmStats();
+  loadPmPersons();
+})();
+
+async function loadPmStats() {
+  try {
+    var r    = await fetch('/api/stats');
+    var data = await r.json();
+    var el   = function(id) { return document.getElementById(id); };
+    el('pmTotal').textContent   = data.total_registered   !== undefined ? data.total_registered   : '—';
+    el('pmPresent').textContent = data.present_today      !== undefined ? data.present_today      : '—';
+    el('pmAbsent').textContent  = data.absent_today       !== undefined ? data.absent_today       : '—';
+  } catch(e) { console.error(e); }
+}
+
+async function loadPmPersons() {
+  try {
+    // Load persons + today's attendance in parallel
+    var [pResp, aResp] = await Promise.all([
+      fetch('/api/persons'),
+      fetch('/api/attendance?date=' + localDateStr())
+    ]);
+    var pData = await pResp.json();
+    var aData = await aResp.json();
+
+    _pmPersons = Array.isArray(pData) ? pData : (pData.persons || []);
+
+    // Build presence map keyed by lowercase name
+    var records = Array.isArray(aData) ? aData : (aData.records || []);
+    _pmPresence = {};
+    records.forEach(function(r) {
+      _pmPresence[(r.name || '').toLowerCase()] = r;
+    });
+
+    renderPmTable(_pmPersons);
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function renderPmTable(persons) {
+  var tbody = document.getElementById('pmBody');
+  if (!tbody) return;
+
+  if (persons.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="6"><div class="empty-state" style="padding:40px;">' +
+        '<i class="bi bi-person-x"></i><p>No persons registered</p>' +
+      '</div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = persons.map(function(p, idx) {
+    var initial  = (p.name || '?').charAt(0).toUpperCase();
+    var color    = avatarColor(p.name || '');
+    var regDate  = p.created_at ? p.created_at.split(' ')[0] : '—';
+    var presence = _pmPresence[(p.name || '').toLowerCase()];
+    var statusHtml;
+
+    if (presence) {
+      if (presence.check_out && presence.check_out !== '—') {
+        statusHtml =
+          '<span style="display:inline-flex;align-items:center;gap:5px;background:#fef3c7;' +
+          'color:#92400e;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">' +
+          '<i class="bi bi-door-open-fill"></i> Checked Out ' + presence.check_out + '</span>';
+      } else {
+        statusHtml =
+          '<span style="display:inline-flex;align-items:center;gap:5px;background:#dcfce7;' +
+          'color:#15803d;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">' +
+          '<i class="bi bi-circle-fill" style="font-size:7px;"></i> In Office since ' + presence.check_in + '</span>';
+      }
+    } else {
+      statusHtml =
+        '<span style="display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;' +
+        'color:#64748b;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">' +
+        '<i class="bi bi-dash-circle"></i> Not checked in</span>';
+    }
+
+    var safeName = (p.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return '<tr data-name="' + (p.name || '').toLowerCase() + '">' +
+      '<td style="color:var(--text-secondary);font-weight:500;">' + (idx + 1) + '</td>' +
+      '<td>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<div class="att-avatar" style="background:' + color + ';width:36px;height:36px;font-size:14px;flex-shrink:0;">' +
+            initial +
+          '</div>' +
+          '<span style="font-weight:600;">' + (p.name || 'Unknown') + '</span>' +
+        '</div>' +
+      '</td>' +
+      '<td style="color:var(--text-secondary);font-size:12.5px;">' + regDate + '</td>' +
+      '<td style="color:var(--text-secondary);font-size:12.5px;">' + (p.department || '<span style="color:#cbd5e1;">—</span>') + '</td>' +
+      '<td>' + statusHtml + '</td>' +
+      '<td style="text-align:right;">' +
+        '<div style="display:inline-flex;gap:6px;">' +
+          '<button class="btn-outline" style="padding:5px 12px;font-size:12px;" ' +
+            'onclick="pmOpenEdit(' + p.id + ',\'' + safeName + '\',\'' + (p.department||'').replace(/'/g,"\\'") + '\')" title="Edit name">' +
+            '<i class="bi bi-pencil"></i> Edit' +
+          '</button>' +
+          '<button class="btn-danger-sm" ' +
+            'onclick="pmDelete(' + p.id + ',\'' + safeName + '\')" title="Delete">' +
+            '<i class="bi bi-trash"></i>' +
+          '</button>' +
+        '</div>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function filterPeople() {
+  var q    = document.getElementById('pmSearch').value.trim().toLowerCase();
+  var rows = document.querySelectorAll('#pmBody tr[data-name]');
+  rows.forEach(function(row) {
+    row.style.display = (q === '' || row.dataset.name.indexOf(q) !== -1) ? '' : 'none';
+  });
+}
+
+/* ── Edit ── */
+function pmOpenEdit(pid, currentName, currentDept) {
+  _pmEditId = pid;
+  var color   = avatarColor(currentName);
+  var initial = currentName.charAt(0).toUpperCase();
+  var avatarEl = document.getElementById('pmEditAvatar');
+  avatarEl.textContent      = initial;
+  avatarEl.style.background = color;
+  document.getElementById('pmEditOldName').textContent = 'Editing: ' + currentName;
+  document.getElementById('pmEditInput').value         = currentName;
+  document.getElementById('pmDeptInput').value         = currentDept || '';
+  document.getElementById('pmEditError').style.display = 'none';
+  document.getElementById('pmEditModal').style.display = 'flex';
+  setTimeout(function() {
+    var inp = document.getElementById('pmEditInput');
+    inp.focus(); inp.select();
+  }, 50);
+}
+
+function pmCloseModal() {
+  document.getElementById('pmEditModal').style.display = 'none';
+  _pmEditId = null;
+}
+
+async function pmSave() {
+  var newName  = document.getElementById('pmEditInput').value.trim();
+  var errorEl  = document.getElementById('pmEditError');
+  var saveBtn  = document.getElementById('pmSaveBtn');
+  errorEl.style.display = 'none';
+
+  if (!newName) {
+    errorEl.textContent = 'Name cannot be empty.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving…';
+  try {
+    var resp = await fetch('/api/persons/' + _pmEditId, {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        name:       newName,
+        department: document.getElementById('pmDeptInput').value.trim()
+      })
+    });
+    var data = await resp.json();
+    if (resp.ok) {
+      showToast('Updated', '"' + newName + '" saved', 'success');
+      pmCloseModal();
+      loadPmPersons();
+      loadPmStats();
+    } else {
+      errorEl.textContent = data.error || 'Could not update name.';
+      errorEl.style.display = 'block';
+    }
+  } catch(e) {
+    errorEl.textContent = 'Network error. Please try again.';
+    errorEl.style.display = 'block';
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save Changes';
+  }
+}
+
+/* ── Delete ── */
+async function pmDelete(pid, name) {
+  if (!confirm('Delete "' + name + '"?\n\nThis will permanently remove their face data and cannot be undone.')) return;
+  try {
+    var resp = await fetch('/api/persons/' + pid, { method: 'DELETE' });
+    if (resp.ok) {
+      showToast('Deleted', '"' + name + '" has been removed.', 'warn');
+      loadPmPersons();
+      loadPmStats();
+    } else {
+      showToast('Error', 'Could not delete person.', 'err');
+    }
+  } catch(e) {
+    showToast('Network Error', 'Could not reach server.', 'err');
+  }
+}
+
+/* Close modal on backdrop click */
+document.getElementById('pmEditModal').addEventListener('click', function(e) {
+  if (e.target === this) pmCloseModal();
+});
+</script>
+{% endblock %}

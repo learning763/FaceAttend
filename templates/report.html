@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% block title %}Monthly Report — FaceAttend Pro{% endblock %}
+{% block page_title %}Monthly Report{% endblock %}
+
+{% block content %}
+
+<!-- ── Controls ── -->
+<div class="card" style="margin-bottom:20px;" id="reportControls">
+  <div class="card-header" style="flex-wrap:wrap;gap:12px;">
+    <div class="card-title">
+      <i class="bi bi-file-earmark-bar-graph-fill" style="color:var(--accent);"></i>
+      Attendance Report
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <input type="month" id="monthPicker" class="form-input" style="width:160px;">
+      <select id="deptFilter" class="form-input" style="width:180px;" onchange="filterByDept()">
+        <option value="">All Departments</option>
+        <option value="Audit">Audit</option>
+        <option value="CSoc">CSoc</option>
+        <option value="Training">Training</option>
+        <option value="Administration">Administration</option>
+        <option value="Forensics">Forensics</option>
+        <option value="Research">Research</option>
+      </select>
+      <button class="btn-primary" onclick="generateReport()">
+        <i class="bi bi-arrow-clockwise"></i> Generate
+      </button>
+      <button class="btn-outline" onclick="window.print()">
+        <i class="bi bi-printer-fill"></i> Print / PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Summary stat cards ── -->
+<div class="stats-grid" id="reportStats" style="display:none;margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
+    <div class="stat-info">
+      <div class="stat-value" id="rptStaff">—</div>
+      <div class="stat-label">Total Staff</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="bi bi-graph-up-arrow"></i></div>
+    <div class="stat-info">
+      <div class="stat-value" id="rptRate">—</div>
+      <div class="stat-label">Avg Attendance</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon orange"><i class="bi bi-clock-fill"></i></div>
+    <div class="stat-info">
+      <div class="stat-value" id="rptLate">—</div>
+      <div class="stat-label">Late Arrivals</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon red"><i class="bi bi-x-circle-fill"></i></div>
+    <div class="stat-info">
+      <div class="stat-value" id="rptAbsent">—</div>
+      <div class="stat-label">Absent (Work Days)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Report Table ── -->
+<div id="reportTableWrap" style="display:none;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title" id="reportTableTitle">
+        <i class="bi bi-calendar3" style="color:var(--accent);"></i>
+        Monthly Overview
+      </div>
+      <div id="reportDeadlineBadge"
+           style="font-size:11px;color:var(--text-secondary);background:var(--bg);
+                  padding:4px 10px;border-radius:20px;border:1px solid var(--border);">
+      </div>
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table id="reportTable" style="border-collapse:collapse;font-size:12px;white-space:nowrap;width:100%;">
+        <thead id="reportHead"></thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Empty state ── -->
+<div id="reportEmpty" style="display:none;">
+  <div class="card">
+    <div class="card-body">
+      <div class="empty-state">
+        <i class="bi bi-calendar-x"></i>
+        <p>No persons registered</p>
+        <small>Register people first to generate a report</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Print-only header (hidden on screen) -->
+<div id="printHeader" style="display:none;">
+  <h2 style="margin:0 0 4px;font-size:18px;">FaceAttend Pro — Attendance Report</h2>
+  <p id="printSubtitle" style="margin:0 0 16px;color:#555;font-size:13px;"></p>
+</div>
+
+<style>
+  /* ── Report table styles ── */
+  #reportTable th, #reportTable td {
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+    vertical-align: middle;
+  }
+  #reportTable th {
+    background: #f8fafc;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  #reportTable td.name-cell {
+    text-align: left;
+    min-width: 160px;
+    background: #fff;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    border-right: 2px solid #e2e8f0;
+  }
+  #reportTable th.name-th {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 160px;
+    border-right: 2px solid #e2e8f0;
+  }
+  #reportTable td.summary-cell {
+    font-weight: 700;
+    background: #f8fafc;
+    border-left: 2px solid #e2e8f0;
+  }
+  .cell-on-time  { background: #dcfce7; color: #15803d; font-weight: 700; }
+  .cell-late     { background: #fef9c3; color: #92400e; font-weight: 700; }
+  .cell-absent   { background: #fff; color: #cbd5e1; }
+  .cell-weekend  { background: #f8fafc; color: #94a3b8; }
+  .cell-today    { outline: 2px solid #6366f1; outline-offset: -2px; }
+
+  /* ── Print styles ── */
+  @media print {
+    .sidebar, .top-header, #reportControls, .toast-wrap { display: none !important; }
+    .main-wrap { margin-left: 0 !important; }
+    .content   { padding: 0 !important; }
+    #reportStats { display: grid !important; }
+    #reportTableWrap { display: block !important; }
+    .card { box-shadow: none !important; border: 1px solid #ccc !important; }
+    .card-header { background: #fff !important; }
+    #printHeader { display: block !important; margin-bottom: 16px; }
+    #reportTable { font-size: 10px; }
+    #reportTable th, #reportTable td { padding: 4px 6px; }
+  }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var _reportData = null;
+
+(function init() {
+  // Default to current month
+  var now = new Date();
+  var m   = String(now.getMonth() + 1).padStart(2, '0');
+  document.getElementById('monthPicker').value = now.getFullYear() + '-' + m;
+
+  generateReport();
+})();
+
+async function generateReport() {
+  var month = document.getElementById('monthPicker').value;
+  if (!month) return;
+
+  try {
+    var resp = await fetch('/api/attendance/report?month=' + encodeURIComponent(month));
+    var data = await resp.json();
+    _reportData = data;
+    renderReport(data);
+  } catch(e) {
+    console.error('generateReport error:', e);
+  }
+}
+
+function renderReport(data) {
+  var persons = data.persons || [];
+  var days    = data.days    || [];
+
+  // Empty state
+  if (persons.length === 0) {
+    document.getElementById('reportStats').style.display       = 'none';
+    document.getElementById('reportTableWrap').style.display   = 'none';
+    document.getElementById('reportEmpty').style.display       = 'block';
+    return;
+  }
+  document.getElementById('reportEmpty').style.display = 'none';
+
+  // Summary stats
+  var totalStaff   = persons.length;
+  var totalPresent = persons.reduce(function(s, p) { return s + p.summary.present; }, 0);
+  var totalLate    = persons.reduce(function(s, p) { return s + p.summary.late;    }, 0);
+  var totalAbsent  = persons.reduce(function(s, p) { return s + p.summary.absent;  }, 0);
+  var workDays     = data.work_days || 0;
+  var possibleDays = workDays * totalStaff;
+  var avgRate      = possibleDays > 0 ? Math.round(totalPresent / possibleDays * 100) : 0;
+
+  document.getElementById('reportStats').style.display = 'grid';
+  document.getElementById('rptStaff').textContent  = totalStaff;
+  document.getElementById('rptRate').textContent   = avgRate + '%';
+  document.getElementById('rptLate').textContent   = totalLate;
+  document.getElementById('rptAbsent').textContent = totalAbsent;
+
+  // Deadline badge
+  var monthLabel = new Date(data.month + '-01').toLocaleDateString('en-US', { month:'long', year:'numeric' });
+  document.getElementById('reportTableTitle').innerHTML =
+    '<i class="bi bi-calendar3" style="color:var(--accent);"></i> ' + monthLabel;
+  document.getElementById('reportDeadlineBadge').textContent =
+    'On-time deadline: ' + (data.deadline || '09:00');
+  document.getElementById('reportTableWrap').style.display = 'block';
+
+  // Print header
+  document.getElementById('printSubtitle').textContent =
+    monthLabel + '  ·  On-time deadline: ' + (data.deadline || '09:00') + '  ·  ' + totalStaff + ' staff';
+
+  // Build day headers
+  var today = localDateStr();
+  var thead = document.getElementById('reportHead');
+  var headerRow = '<tr><th class="name-th">Name / Dept</th>';
+  days.forEach(function(d) {
+    var dt  = new Date(d + 'T00:00:00');
+    var wd  = dt.getDay();
+    var day = String(dt.getDate());
+    var dayAbbr = ['Su','Mo','Tu','We','Th','Fr','Sa'][wd];
+    var cls = (wd === 0 || wd === 6) ? ' style="background:#f8fafc;color:#94a3b8;"' : '';
+    headerRow += '<th' + cls + ' title="' + d + '">' + day + '<br><span style="font-weight:400;">' + dayAbbr + '</span></th>';
+  });
+  headerRow += '<th class="summary-cell" style="color:#15803d;">P</th>' +
+               '<th class="summary-cell" style="color:#92400e;">L</th>' +
+               '<th class="summary-cell" style="color:#ef4444;">A</th>' +
+               '</tr>';
+  thead.innerHTML = headerRow;
+
+  // Build body rows
+  var tbody = document.getElementById('reportBody');
+  tbody.innerHTML = persons.map(function(p) {
+    var row = '<tr data-dept="' + (p.department || '') + '">';
+    row += '<td class="name-cell">' +
+      '<div style="font-weight:600;font-size:12.5px;">' + p.name + '</div>' +
+      (p.department ? '<div style="font-size:10px;color:var(--text-secondary);">' + p.department + '</div>' : '') +
+    '</td>';
+
+    days.forEach(function(d) {
+      var dt  = new Date(d + 'T00:00:00');
+      var wd  = dt.getDay();
+      var rec = p.days[d];
+      var cls, text, title;
+
+      if (wd === 0 || wd === 6) {
+        cls = 'cell-weekend'; text = '·'; title = 'Weekend';
+      } else if (rec) {
+        if (rec.status === 'on_time') {
+          cls = 'cell-on-time'; text = '✓';
+          title = 'In: ' + rec.check_in + (rec.check_out ? ' Out: ' + rec.check_out : ' (in office)');
+        } else {
+          cls = 'cell-late'; text = 'L';
+          title = 'Late — In: ' + rec.check_in + (rec.check_out ? ' Out: ' + rec.check_out : '');
+        }
+      } else {
+        cls = 'cell-absent'; text = '·'; title = 'Absent';
+      }
+      var todayCls = (d === today) ? ' cell-today' : '';
+      row += '<td class="' + cls + todayCls + '" title="' + title + '">' + text + '</td>';
+    });
+
+    row += '<td class="summary-cell" style="color:#15803d;">' + p.summary.present  + '</td>';
+    row += '<td class="summary-cell" style="color:#92400e;">' + p.summary.late     + '</td>';
+    row += '<td class="summary-cell" style="color:#ef4444;">' + p.summary.absent   + '</td>';
+    row += '</tr>';
+    return row;
+  }).join('');
+
+  filterByDept();
+}
+
+function filterByDept() {
+  if (!_reportData) return;
+  var sel  = document.getElementById('deptFilter').value;
+  var rows = document.querySelectorAll('#reportBody tr[data-dept]');
+  rows.forEach(function(row) {
+    row.style.display = (!sel || row.dataset.dept === sel) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

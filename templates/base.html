@@ -53,6 +53,18 @@
         Records
       </a>
 
+      <a href="/people"
+         class="nav-item {% if request.path == '/people' %}active{% endif %}">
+        <i class="bi bi-people-fill"></i>
+        People
+      </a>
+
+      <a href="/report"
+         class="nav-item {% if request.path == '/report' %}active{% endif %}">
+        <i class="bi bi-file-earmark-bar-graph-fill"></i>
+        Report
+      </a>
+
       <p class="nav-section-label" style="margin-top:12px;">SYSTEM</p>
 
       <a href="/settings"
@@ -116,6 +128,9 @@
        TOAST CONTAINER
        ============================================================ -->
   <div class="toast-wrap" id="toastContainer"></div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
   <!-- App JavaScript -->
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>

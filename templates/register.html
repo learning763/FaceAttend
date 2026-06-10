@@ -32,6 +32,20 @@
         >
       </div>
 
+      <!-- Department Select -->
+      <div class="mb-16">
+        <label class="form-label" for="deptSelect">Department</label>
+        <select id="deptSelect" class="form-input">
+          <option value="">— select department —</option>
+          <option value="Audit">Audit</option>
+          <option value="CSoc">CSoc</option>
+          <option value="Training">Training</option>
+          <option value="Administration">Administration</option>
+          <option value="Forensics">Forensics</option>
+          <option value="Research">Research</option>
+        </select>
+      </div>
+
       <!-- Camera Preview -->
       <div style="margin-bottom:16px;position:relative;border-radius:10px;overflow:hidden;">
         <div class="cam-wrap" style="aspect-ratio:4/3;border-radius:10px;">
@@ -109,9 +123,103 @@
 
 {% endblock %}
 
+<!-- ── Edit Name Modal ── -->
+<div id="editModal"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+            z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 32px;width:100%;max-width:400px;
+              box-shadow:0 20px 60px rgba(0,0,0,.25);margin:0 16px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+      <div style="width:36px;height:36px;border-radius:9px;background:#ede9fe;color:#6d28d9;
+                  display:flex;align-items:center;justify-content:center;font-size:17px;">
+        <i class="bi bi-pencil-fill"></i>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text-primary);">Edit Name</div>
+        <div style="font-size:12px;color:var(--text-secondary);">Update registered person's name</div>
+      </div>
+    </div>
+    <input id="editNameInput" type="text" class="form-input" placeholder="Full name"
+           style="margin-bottom:8px;"
+           onkeydown="if(event.key==='Enter') saveEditName(); if(event.key==='Escape') closeEditModal();">
+    <div id="editModalError"
+         style="display:none;font-size:12px;color:#dc2626;margin-bottom:10px;padding:8px 12px;
+                background:#fef2f2;border-radius:6px;border:1px solid #fecaca;"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button onclick="saveEditName()" id="saveEditBtn" class="btn-primary" style="flex:1;justify-content:center;">
+        <i class="bi bi-check-lg"></i> Save
+      </button>
+      <button onclick="closeEditModal()" class="btn-outline" style="flex:1;justify-content:center;">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
 {% block scripts %}
 <script>
   initRegisterPage();
   loadPersons();
+
+  var _editingPid = null;
+
+  function openEditModal(pid, currentName) {
+    _editingPid = pid;
+    var input = document.getElementById('editNameInput');
+    input.value = currentName;
+    document.getElementById('editModalError').style.display = 'none';
+    document.getElementById('editModal').style.display = 'flex';
+    setTimeout(function () { input.focus(); input.select(); }, 50);
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    _editingPid = null;
+  }
+
+  async function saveEditName() {
+    var newName  = document.getElementById('editNameInput').value.trim();
+    var errorEl  = document.getElementById('editModalError');
+    var saveBtn  = document.getElementById('saveEditBtn');
+
+    errorEl.style.display = 'none';
+    if (!newName) {
+      errorEl.textContent = 'Name cannot be empty.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving…';
+
+    try {
+      var resp = await fetch('/api/persons/' + _editingPid, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name: newName })
+      });
+      var data = await resp.json();
+
+      if (resp.ok) {
+        showToast('Name Updated', 'Renamed to "' + newName + '"', 'success');
+        closeEditModal();
+        loadPersons();
+      } else {
+        errorEl.textContent = data.error || 'Could not update name.';
+        errorEl.style.display = 'block';
+      }
+    } catch (e) {
+      errorEl.textContent = 'Network error. Please try again.';
+      errorEl.style.display = 'block';
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
+    }
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('editModal').addEventListener('click', function (e) {
+    if (e.target === this) closeEditModal();
+  });
 </script>
 {% endblock %}
