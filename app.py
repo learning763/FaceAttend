@@ -33,11 +33,11 @@ DB_CONFIG = {
 
 MODEL                  = 'Facenet512'
 DETECTOR               = 'opencv'
-THRESHOLD              = 0.30                # Lower = stricter (0.40→0.30 for higher accuracy)
+THRESHOLD              = 0.25               # Lower = stricter (0.40→0.30 for higher accuracy)
 MIN_CONFIDENCE         = 70                  # Require 70%+ confidence for face match
 DEFAULT_CHECK_IN_START  = '08:00'
 DEFAULT_CHECK_OUT_START = '16:30'
-CHECK_IN_GRACE_MINUTES  = 60       # check-ins within this many mins of check_in_start count as on-time
+CHECK_IN_GRACE_MINUTES  = 60       # check-ins within this may mins of check_in_start count as on-time
 RECOGNITION_THRESHOLD  = 5         # require 5 consecutive recognitions before marking attendance (3→5 for higher accuracy)
 
 # ── Face Verification Tracking ────────────────────────────────────────────────
