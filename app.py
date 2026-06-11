@@ -33,10 +33,20 @@ DB_CONFIG = {
 
 MODEL                  = 'Facenet512'
 DETECTOR               = 'opencv'
-THRESHOLD              = 0.40
+THRESHOLD              = 0.30                # Lower = stricter (0.40→0.30 for higher accuracy)
+MIN_CONFIDENCE         = 70                  # Require 70%+ confidence for face match
 DEFAULT_CHECK_IN_START  = '08:00'
 DEFAULT_CHECK_OUT_START = '16:30'
 CHECK_IN_GRACE_MINUTES  = 60       # check-ins within this many mins of check_in_start count as on-time
+RECOGNITION_THRESHOLD  = 5         # require 5 consecutive recognitions before marking attendance (3→5 for higher accuracy)
+
+# ── Face Verification Tracking ────────────────────────────────────────────────
+# Tracks consecutive recognitions of the same person to prevent false positives
+face_recognition_tracker = {
+    'current_person_id': None,      # ID of person being tracked
+    'consecutive_count': 0,         # How many times recognized in a row
+    'last_marked_time': None,       # When attendance was last marked (to avoid duplicates)
+}
 
 
 # ── User model ────────────────────────────────────────────────────────────────
@@ -195,7 +205,7 @@ def detect_and_embed(bgr_img: np.ndarray):
         return out
 
     for fo in face_objs:
-        if fo.get('confidence', 0) < 0.5:
+        if fo.get('confidence', 0) < 0.65:  # Increased from 0.5 to 0.65 for stricter face detection
             continue
         region = fo['facial_area']
         x, y, fw, fh = region['x'], region['y'], region['w'], region['h']
@@ -234,6 +244,26 @@ def get_known_faces():
         names.append(name)
         encodings.append(pickle.loads(blob))
     return ids, names, encodings
+
+
+def init_deepface_models():
+    """Pre-cache DeepFace models on app startup to avoid downloads during requests."""
+    print('  ⏳ Pre-caching DeepFace models...')
+    try:
+        # Create a small dummy image to trigger model downloads
+        dummy_img = np.zeros((100, 100, 3), dtype=np.uint8)
+        
+        # Pre-load face detection model
+        print('    • Loading face detector...')
+        DeepFace.extract_faces(dummy_img, detector_backend=DETECTOR, enforce_detection=False)
+        
+        # Pre-load embedding model (FaceNet512)
+        print('    • Loading embedding model (FaceNet512)...')
+        DeepFace.represent(dummy_img, model_name=MODEL, detector_backend='skip', enforce_detection=False)
+        
+        print('  ✓ Models cached successfully!\n')
+    except Exception as e:
+        print(f'  ⚠ Warning: Could not pre-cache models: {e}\n')
 
 
 # ── Attendance helpers ────────────────────────────────────────────────────────
@@ -420,6 +450,8 @@ def settings_page():
 @app.route('/api/recognize', methods=['POST'])
 @login_required
 def recognize():
+    global face_recognition_tracker
+    
     data = request.get_json(silent=True) or {}
     if 'image' not in data:
         return jsonify({'error': 'No image provided'}), 400
@@ -429,6 +461,8 @@ def recognize():
     ids, names, known_encs = get_known_faces()
 
     faces, events = [], []
+    detected_person_id = None  # Person detected in THIS frame
+    
     for loc, embedding in face_data:
         name, person_id, confidence = 'Unknown', None, 0.0
 
@@ -436,22 +470,48 @@ def recognize():
             distances = [cosine_distance(embedding, ke) for ke in known_encs]
             idx = int(np.argmin(distances))
             if distances[idx] < THRESHOLD:
-                name       = names[idx]
-                person_id  = ids[idx]
                 confidence = round((1.0 - distances[idx]) * 100, 1)
+                # Only accept match if confidence meets minimum threshold
+                if confidence >= MIN_CONFIDENCE:
+                    name       = names[idx]
+                    person_id  = ids[idx]
 
         action = None
+        verification_status = None
+        
         if person_id:
-            try:
-                action = mark_attendance(person_id, name)
-                if action in ('check_in', 'check_out'):
-                    events.append({'name': name, 'action': action,
-                                   'time': datetime.now().strftime('%H:%M:%S')})
-            except Exception as e:
-                print(f'[attendance error] {e}')
+            # ── Face Verification Logic ──────────────────────────────────────────
+            # Same person detected consecutively → increment counter
+            if person_id == face_recognition_tracker['current_person_id']:
+                face_recognition_tracker['consecutive_count'] += 1
+            # Different person detected → reset counter
+            else:
+                face_recognition_tracker['current_person_id'] = person_id
+                face_recognition_tracker['consecutive_count'] = 1
+            
+            count = face_recognition_tracker['consecutive_count']
+            verification_status = f'{count}/{RECOGNITION_THRESHOLD}'
+            
+            # ── Mark Attendance Once Verified ────────────────────────────────────
+            if count >= RECOGNITION_THRESHOLD:
+                try:
+                    action = mark_attendance(person_id, name)
+                    if action in ('check_in', 'check_out'):
+                        events.append({'name': name, 'action': action,
+                                       'time': datetime.now().strftime('%H:%M:%S')})
+                        # Reset counter after successful attendance marking
+                        face_recognition_tracker['consecutive_count'] = 0
+                        face_recognition_tracker['current_person_id'] = None
+                except Exception as e:
+                    print(f'[attendance error] {e}')
+        else:
+            # Unknown face → reset tracker
+            face_recognition_tracker['current_person_id'] = None
+            face_recognition_tracker['consecutive_count'] = 0
 
         faces.append({'name': name, 'confidence': confidence,
-                      'action': action, 'location': loc})
+                      'action': action, 'verification': verification_status,
+                      'location': loc})
 
     return jsonify({'faces': faces, 'events': events})
 
@@ -998,6 +1058,7 @@ def attendance_report_api():
 
 if __name__ == '__main__':
     init_db()
+    init_deepface_models()
     print('\n  Face Attendance System  (MySQL + Auth)')
     print('  Running at http://localhost:5000\n')
     app.run(debug=True, host='0.0.0.0', port=5000)

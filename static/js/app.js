@@ -201,7 +201,14 @@ function drawFaces(canvas, video, faces) {
 
     var conf       = face.confidence ? Math.round(face.confidence) : '';
     var confStr    = conf ? ('  ' + conf + '%') : '';
-    var labelText  = (face.name || 'Unknown') + actionTag + confStr;
+    
+    // Add verification counter if face is being verified
+    var verifyTag  = '';
+    if (face.verification && face.name && face.name !== 'Unknown' && !face.action) {
+      verifyTag = '  [' + face.verification + ']';
+    }
+    
+    var labelText  = (face.name || 'Unknown') + actionTag + confStr + verifyTag;
 
     ctx.font = '600 13px Inter, system-ui, sans-serif';
     var textW   = ctx.measureText(labelText).width;
@@ -360,11 +367,27 @@ async function startRecognition() {
       if (faces.length === 0) {
         setStatus('No faces detected');
       } else {
-        var known = faces.filter(function (f) {
-          return f.name && f.name !== 'Unknown';
+        var verifying = faces.filter(function (f) {
+          return f.verification && f.name && f.name !== 'Unknown';
+        });
+        var unknown = faces.filter(function (f) {
+          return f.name === 'Unknown';
         }).length;
-        setStatus(faces.length + ' face' + (faces.length !== 1 ? 's' : '') + ' detected' +
-          (known > 0 ? ' — ' + known + ' recognised' : ''));
+        
+        var status = faces.length + ' face' + (faces.length !== 1 ? 's' : '') + ' detected';
+        
+        if (verifying.length > 0) {
+          var verifyText = verifying.map(function (f) {
+            return f.name + ' ' + f.verification;
+          }).join(', ');
+          status += ' — Verifying: ' + verifyText;
+        }
+        
+        if (unknown > 0) {
+          status += ' (' + unknown + ' unknown)';
+        }
+        
+        setStatus(status);
       }
 
     } catch (err) {
@@ -559,7 +582,7 @@ async function startCapture() {
   if (captureBtn)      captureBtn.disabled = true;
   if (captureProgress) captureProgress.style.display = 'block';
 
-  var total  = 5;
+  var total  = 20;
   var images = [];
 
   try {
@@ -612,7 +635,7 @@ async function startCapture() {
     if (captureBtn)      captureBtn.disabled = false;
     if (captureProgress) captureProgress.style.display = 'none';
     if (progressBar)     progressBar.style.width = '0%';
-    if (captureCounter)  captureCounter.textContent = '0 / 5';
+    if (captureCounter)  captureCounter.textContent = '0 / 20';
   }
 }
 
